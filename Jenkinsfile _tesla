@@ -1,0 +1,36 @@
+node{
+    def mavenHome = tool name: 'maven3.8.6'
+    stage('1cloneCode'){
+      git "https://github.com/LandmarkTechDevOps29/maven-web-application"
+   }
+   stage('2test&Build'){
+    sh "${mavenHome}/bin/mvn clean package"   
+   }
+   stage('3codeQuality'){
+    sh "${mavenHome}/bin/mvn sonar:sonar"   
+   }
+    stage('4uploadArtifacts'){
+    //sh "${mavenHome}/bin/mvn deploy"
+    }
+    stage('5deploy2UAT'){
+      sh "echo 'deploy to UAT' "  
+    deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://13.56.237.83:8080/')], contextPath: null, war: 'target/*war'  
+    }
+    stage('6approveGate'){
+    sh "echo 'ready to review' "
+    timeout(time:5, unit:'DAYS'){
+    input message: 'Application ready for deployment, Please review and approve'
+    }
+}
+    stage('7deploy2Prod'){
+    deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://13.56.237.83:8080/')], contextPath: null, war: 'target/*war'
+    }
+    stage('8emailNotification'){
+    emailext body: '''Hi All,
+
+Check build status
+
+Landmark Technologies''', recipientProviders: [buildUser(), developers(), upstreamDevelopers(), contributor()], subject: 'build status', to: 'teslaapp@gmail.com'
+    }
+ }
+
